@@ -2,13 +2,11 @@
 module Main where
 
 import Control.Monad.IO.Class
-import Control.Lens
+import Control.Lens ((^.),(^?), (?~), (&), ix)
 import Data.Aeson
 import Data.Aeson.Lens
-import GHC.Exts (fromList)
-import GHC.Generics
-import qualified Network.Wreq as W
-import Web.Scotty
+import Network.Wreq (postWith, responseStatus, defaults, auth, oauth2Bearer)
+import Web.Scotty (scotty, post, body)
 
 main :: IO ()
 main = scotty 4567 $
@@ -18,14 +16,12 @@ main = scotty 4567 $
         let Just ev = b ^? key "events" . _Array . ix 0 . _Object
         let token = ev ^. ix "replyToken" . _String
             m = ev ^. ix "message" . _Object . ix "text" . _String
-            msg = Object $ fromList [("type", String "text")
-                                    ,("text", String m)]
-            res = Object $ fromList [("replyToken", String token)
-                                    ,("messages", Array $ fromList [msg])]
-            opt = W.defaults & W.auth ?~ W.oauth2Bearer accessToken
+            msg = object ["type" .= ("text" :: String), "text" .= m]
+            res = object ["replyToken" .= token, "messages" .= [msg]]
+            opt = defaults & auth ?~ oauth2Bearer accessToken
         liftIO $ print res
-        r <- liftIO $ W.postWith opt lineUrl res
-        liftIO $ print $ r ^. W.responseStatus
+        r <- liftIO $ postWith opt lineUrl res
+        liftIO $ print $ r ^. responseStatus
 
 lineUrl :: String
 lineUrl = "https://api.line.me/v2/bot/message/reply"
