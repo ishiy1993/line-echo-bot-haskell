@@ -20,7 +20,10 @@ main = do
             liftIO $ print b
             let Just ev = b ^? key "events" . _Array . ix 0 . _Object
             let token = ev ^. ix "replyToken" . _String
-                m = ev ^. ix "message" . _Object . ix "text" . _String
+                m = case ev ^. ix "type" . _String of
+                      "message" -> ev ^. ix "message" . _Object . ix "text" . _String
+                      "beacon" -> "Beacon!!"
+                      _ -> "Others"
                 msg = object ["type" .= ("text" :: String), "text" .= m]
                 res = object ["replyToken" .= token, "messages" .= [msg]]
                 opt = defaults & auth ?~ oauth2Bearer (accessToken^.packedChars)
